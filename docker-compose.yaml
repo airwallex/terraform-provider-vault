@@ -1,23 +1,14 @@
-version: "2.2"
+version: "3.7"
 
 services:
-  vault:
-    image: vault:latest
-    cap_add:
-    - "IPC_LOCK"
-    ports:
-    - "8200:8200"
+  compile:
+    build:
+      context: .
+    volumes:
+      - .:/go/src/github.com/terraform-providers/terraform-provider-vault/
+      - ../../../../bin:/go/bin
+    working_dir: /go/src/github.com/terraform-providers/terraform-provider-vault/
     environment:
-      VAULT_DEV_ROOT_TOKEN_ID: "TEST"
-      VAULT_ADDR: "http://localhost:8200"
-      VAULT_TOKEN: "TEST"
-      MYSQL_URL: "vault:vault@tcp(mysql:3306)/"
-
-  mysql:
-    image: mysql:5.7
-    command: --default-authentication-plugin=mysql_native_password
-    environment:
-      MYSQL_ROOT_PASSWORD: "root"
-      MYSQL_DATABASE: "main"
-      MYSQL_USER: "vault"
-      MYSQL_PASSWORD: "vault"
+      - CGO_ENABLED=0 
+      - GOOS=linux 
+      - GOARCH=amd64

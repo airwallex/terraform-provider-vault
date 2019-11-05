@@ -18,6 +18,8 @@ require (
 	github.com/ory/dockertest v3.3.4+incompatible
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	google.golang.org/api v0.9.0
 )
 
-replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
+//replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0

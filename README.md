@@ -1,6 +1,17 @@
 Terraform Provider
 ==================
 
+Enhancement
+-----------
+    Support gcp login which automate the jwt generating process. Added below parameters:
+```
+method = "gcp"
+path = "auth/gcp/login"      
+project = "devops-toolbox-pci"
+service_account = "terraform-sa@devops-toolbox-pci.iam.gserviceaccount.com"
+creds = file(var.google_application_credentials)
+```
+
 - Website: https://www.terraform.io
 - [![Gitter chat](https://badges.gitter.im/hashicorp-terraform/Lobby.png)](https://gitter.im/hashicorp-terraform/Lobby)
 - Mailing list: [Google Groups](http://groups.google.com/group/terraform-tool)
