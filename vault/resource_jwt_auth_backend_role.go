@@ -44,6 +44,24 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Required:    true,
 			Description: "The claim to use to uniquely identify the user; this will be used as the name for the Identity entity alias created due to a successful login.",
 		},
+		"clock_skew_leeway": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     0,
+			Description: "The amount of leeway to add to all claims to account for clock skew, in seconds. Defaults to 60 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles.",
+		},
+		"expiration_leeway": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     0,
+			Description: "The amount of leeway to add to expiration (exp) claims to account for clock skew, in seconds. Defaults to 60 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles.",
+		},
+		"not_before_leeway": {
+			Type:        schema.TypeInt,
+			Optional:    true,
+			Default:     0,
+			Description: "The amount of leeway to add to not before (nbf) claims to account for clock skew, in seconds. Defaults to 150 seconds if set to 0 and can be disabled if set to -1. Only applicable with 'jwt' roles. ",
+		},
 		"allowed_redirect_uris": {
 			Type:     schema.TypeSet,
 			Optional: true,
@@ -86,6 +104,12 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Description: "A pattern of delimiters used to allow the groups_claim to live outside of the top-level JWT structure. For instance, a groups_claim of meta/user.name/groups with this field set to // will expect nested structures named meta, user.name, and groups. If this field was set to /./ the groups information would expect to be via nested structures of meta, user, name, and groups.",
 			Deprecated:  "`groups_claim_delimiter_pattern` has been removed since Vault 1.1. If the groups claim is not at the top level, it can now be specified as a JSONPointer.",
 		},
+		"verbose_oidc_logging": {
+			Type:        schema.TypeBool,
+			Optional:    true,
+			Default:     false,
+			Description: "Log received OIDC tokens and claims when debug-level logging is active. Not recommended in production since sensitive information may be present in OIDC responses.",
+		},
 		"backend": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -106,7 +130,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 				Type: schema.TypeString,
 			},
 			Description:   "Policies to be set on tokens issued using this role.",
-			Deprecated:    "use `token_policies` instead",
+			Deprecated:    "use `token_policies` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_policies"},
 		},
 		"ttl": {
@@ -114,13 +138,13 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Optional:      true,
 			Description:   "Default number of seconds to set as the TTL for issued tokens and at renewal time.",
 			ConflictsWith: []string{"period", "token_ttl", "token_period"},
-			Deprecated:    "use `token_ttl` instead",
+			Deprecated:    "use `token_ttl` instead if you are running Vault >= 1.2",
 		},
 		"max_ttl": {
 			Type:          schema.TypeInt,
 			Optional:      true,
 			Description:   "Number of seconds after which issued tokens can no longer be renewed.",
-			Deprecated:    "use `token_max_ttl` instead",
+			Deprecated:    "use `token_max_ttl` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_max_ttl"},
 		},
 		"period": {
@@ -128,13 +152,13 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Optional:      true,
 			Description:   "Number of seconds to set the TTL to for issued tokens upon renewal. Makes the token a periodic token, which will never expire as long as it is renewed before the TTL each period.",
 			ConflictsWith: []string{"ttl", "token_period", "token_ttl"},
-			Deprecated:    "use `token_period` instead",
+			Deprecated:    "use `token_period` instead if you are running Vault >= 1.2",
 		},
 		"num_uses": {
 			Type:          schema.TypeInt,
 			Optional:      true,
 			Description:   "Number of times issued tokens can be used. Setting this to 0 or leaving it unset means unlimited uses.",
-			Deprecated:    "use `token_num_uses` instead",
+			Deprecated:    "use `token_num_uses` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_num_uses"},
 		},
 		"bound_cidrs": {
@@ -144,7 +168,7 @@ func jwtAuthBackendRoleResource() *schema.Resource {
 			Elem: &schema.Schema{
 				Type: schema.TypeString,
 			},
-			Deprecated:    "use `token_bound_cidrs` instead",
+			Deprecated:    "use `token_bound_cidrs` instead if you are running Vault >= 1.2",
 			ConflictsWith: []string{"token_bound_cidrs"},
 		},
 	}
@@ -363,6 +387,19 @@ func jwtAuthBackendRoleRead(d *schema.ResourceData, meta interface{}) error {
 		d.Set("groups_claim_delimiter_pattern", resp.Data["groups_claim_delimiter_pattern"].(string))
 	}
 
+	if v, ok := resp.Data["clock_skew_leeway"]; ok {
+		d.Set("clock_skew_leeway", v)
+	}
+	if v, ok := resp.Data["expiration_leeway"]; ok {
+		d.Set("expiration_leeway", v)
+	}
+	if v, ok := resp.Data["not_before_leeway"]; ok {
+		d.Set("not_before_leeway", v)
+	}
+	if v, ok := resp.Data["verbose_oidc_logging"]; ok {
+		d.Set("verbose_oidc_logging", v)
+	}
+
 	d.Set("backend", backend)
 	d.Set("role_name", role)
 
@@ -510,6 +547,12 @@ func jwtAuthBackendRoleDataToWrite(d *schema.ResourceData, create bool) map[stri
 	if v, ok := d.GetOkExists("groups_claim_delimiter_pattern"); ok {
 		data["groups_claim_delimiter_pattern"] = v.(string)
 	}
+
+	data["clock_skew_leeway"] = d.Get("clock_skew_leeway").(int)
+	data["expiration_leeway"] = d.Get("expiration_leeway").(int)
+	data["not_before_leeway"] = d.Get("not_before_leeway").(int)
+
+	data["verbose_oidc_logging"] = d.Get("verbose_oidc_logging").(bool)
 
 	// Deprecated Fields
 	if dataList := util.TerraformSetToStringArray(d.Get("policies")); len(dataList) > 0 {

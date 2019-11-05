@@ -372,6 +372,10 @@ var (
 			Resource:      databaseSecretBackendRoleResource(),
 			PathInventory: []string{"/database/roles/{name}"},
 		},
+		"vault_database_secret_backend_static_role": {
+			Resource:      databaseSecretBackendStaticRoleResource(),
+			PathInventory: []string{"/database/static-roles/{name}"},
+		},
 		"vault_github_auth_backend": {
 			Resource:      githubAuthBackendResource(),
 			PathInventory: []string{"/auth/github/config"},
@@ -499,6 +503,10 @@ var (
 		"vault_identity_entity_alias": {
 			Resource:      identityEntityAliasResource(),
 			PathInventory: []string{"/identity/entity-alias"},
+		},
+		"vault_identity_entity_policies": {
+			Resource:      identityEntityPoliciesResource(),
+			PathInventory: []string{"/identity/lookup/entity"},
 		},
 		"vault_identity_group": {
 			Resource:      identityGroupResource(),
