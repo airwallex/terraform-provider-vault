@@ -17,7 +17,6 @@ Example Usage:
 ```
 provider "vault" {
   version = "2.5.0"
-  token = ""
   auth_login {
     method = "gcp"
     path = "auth/gcp/login"      
