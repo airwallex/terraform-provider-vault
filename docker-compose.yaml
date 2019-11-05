@@ -6,7 +6,7 @@ services:
       context: .
     volumes:
       - .:/go/src/github.com/terraform-providers/terraform-provider-vault/
-      - ../../../../bin:/go/bin
+      - ./bin:/go/bin
     working_dir: /go/src/github.com/terraform-providers/terraform-provider-vault/
     environment:
       - CGO_ENABLED=0 
