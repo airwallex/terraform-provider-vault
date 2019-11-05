@@ -3,13 +3,32 @@ Terraform Provider
 
 Enhancement
 -----------
-    Support gcp login which automate the jwt generating process. Added below parameters:
+Support gcp login which automate the jwt generating process. Added below parameters:
 ```
 method = "gcp"
 path = "auth/gcp/login"      
-project = "devops-toolbox-pci"
-service_account = "terraform-sa@devops-toolbox-pci.iam.gserviceaccount.com"
+project = "your-project"
+service_account = "sa@your-project.iam.gserviceaccount.com"
 creds = file(var.google_application_credentials)
+```
+
+Example Usage:
+-----------
+```
+provider "vault" {
+  version = "2.5.0"
+  token = ""
+  auth_login {
+    method = "gcp"
+    path = "auth/gcp/login"      
+    project = "your-project"
+    service_account = "sa@your-project.iam.gserviceaccount.com"
+    creds = file(var.google_application_credentials)
+    parameters = {
+      role = "devops"
+    }
+  }
+}
 ```
 
 - Website: https://www.terraform.io
