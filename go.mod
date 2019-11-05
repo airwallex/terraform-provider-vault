@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/aws/aws-sdk-go v1.22.0
-	github.com/google/btree v1.0.0 // indirect
+	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gosimple/slug v1.4.1
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-multierror v1.0.0
@@ -15,6 +15,8 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/rainycape/unidecode v0.0.0-20150907023854-cb7f23ec59be // indirect
 	github.com/ulikunitz/xz v0.5.6 // indirect
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	google.golang.org/api v0.9.0
 )
 
-replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0
+//replace git.apache.org/thrift.git => github.com/apache/thrift v0.12.0

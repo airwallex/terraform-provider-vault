@@ -1,10 +1,12 @@
 package vault
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/logging"
@@ -13,6 +15,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
+	"google.golang.org/api/iam/v1"
 )
 
 const (
@@ -32,6 +38,44 @@ const (
 // of the same resource write to the same path in Vault.
 // The key of the mutex should be the path in Vault.
 var vaultMutexKV = mutexkv.NewMutexKV()
+
+func getSignedJWT(project string, serviceAccount string, creds string, role string) string {
+	config, err := google.JWTConfigFromJSON([]byte(creds), iam.CloudPlatformScope)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	httpClient := config.Client(oauth2.NoContext)
+	iamClient, err := iam.New(httpClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// End [GCP IAM Setup]
+
+	// 1. Generate signed JWT using IAM.
+	resourceName := fmt.Sprintf("projects/%s/serviceAccounts/%s", project, serviceAccount)
+	jwtPayload := map[string]interface{}{
+		"aud": role,
+		"sub": serviceAccount,
+		"exp": time.Now().Add(time.Minute * 10).Unix(),
+	}
+
+	payloadBytes, err := json.Marshal(jwtPayload)
+	if err != nil {
+		log.Fatal(err)
+	}
+	signJwtReq := &iam.SignJwtRequest{
+		Payload: string(payloadBytes),
+	}
+
+	resp, err := iamClient.Projects.ServiceAccounts.SignJwt(
+		resourceName, signJwtReq).Do()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return resp.SignedJwt
+}
 
 func Provider() terraform.ResourceProvider {
 	dataSourcesMap, err := parse(DataSourceRegistry)
@@ -74,6 +118,22 @@ func Provider() terraform.ResourceProvider {
 				Description: "Login to vault with an existing auth method using auth/<mount>/login",
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						"method": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"project": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"service_account": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
+						"creds": {
+							Type:     schema.TypeString,
+							Optional: true,
+						},
 						"path": {
 							Type:     schema.TypeString,
 							Required: true,
@@ -612,6 +672,40 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 			client.SetNamespace(authLoginNamespace)
 		}
 		authLoginParameters := authLogin["parameters"].(map[string]interface{})
+		authLoginMethod := ""
+		if authLoginMethodI, ok := authLogin["method"]; ok {
+			authLoginMethod = authLoginMethodI.(string)
+			if "gcp" == strings.ToLower(authLoginMethod) {
+				project := ""
+				if projectI, ok := authLogin["project"]; ok {
+					project = projectI.(string)
+				} else {
+					log.Fatal("project is required when gcp method is specified")
+				}
+				serviceAccount := ""
+				if serviceAccountI, ok := authLogin["service_account"]; ok {
+					serviceAccount = serviceAccountI.(string)
+				} else {
+					log.Fatal("service_account is required when gcp method is specified")
+				}
+				creds := ""
+				if credsI, ok := authLogin["creds"]; ok {
+					creds = credsI.(string)
+				} else {
+					log.Fatal("creds is required when gcp method is specified")
+				}
+				role := ""
+				if roleI, ok := authLoginParameters["role"]; ok {
+					role = roleI.(string)
+					role = "vault/" + role
+				} else {
+					log.Fatal("role is required when gcp method is specified")
+				}
+				signedJwt := getSignedJWT(project, serviceAccount, creds, role)
+				log.Printf("[INFO] signedJwt: %s", signedJwt)
+				authLoginParameters["jwt"] = signedJwt
+			}
+		}
 
 		secret, err := client.Logical().Write(authLoginPath, authLoginParameters)
 		if err != nil {
